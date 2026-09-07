@@ -466,6 +466,7 @@ function initDropzone() {
   let selectedFile = null;
 
   dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("click", (e) => e.stopPropagation());
 
   dropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -491,21 +492,36 @@ function initDropzone() {
   });
 
   function handleFileSelected(file) {
-    if (!file.name.toLowerCase().endswith(".pdf")) {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
       alert("Please choose a valid PDF file.");
       return;
     }
     selectedFile = file;
-    dropzone.querySelector("p").innerText = `Selected: ${file.name}`;
-    dropzone.querySelector(".stat-sub").innerText = `${(file.size / 1024).toFixed(1)} KB`;
+    document.getElementById("dropzone-label").innerText = `Selected: ${file.name}`;
+    document.getElementById("dropzone-sub").innerText = `${(file.size / 1024).toFixed(1)} KB (Ready to process)`;
     submitBtn.disabled = false;
   }
+
+  function resetDropzoneUI() {
+    selectedFile = null;
+    fileInput.value = "";
+    document.getElementById("dropzone-label").innerText = "Drag and drop your PDF here";
+    document.getElementById("dropzone-sub").innerText = "or click anywhere in this box to select a file";
+    submitBtn.disabled = true;
+    statusDiv.style.display = "none";
+  }
+
+  document.getElementById("btn-cancel-upload").addEventListener("click", resetDropzoneUI);
+  document.getElementById("upload-modal-close").addEventListener("click", resetDropzoneUI);
 
   submitBtn.addEventListener("click", async () => {
     if (!selectedFile) return;
 
     submitBtn.disabled = true;
     statusDiv.style.display = "block";
+    statusDiv.style.background = "#eff6ff";
+    statusDiv.style.borderColor = "#bfdbfe";
+    statusText.style.color = "var(--primary)";
     statusText.innerText = "Parsing PDF & incrementally reconciling facts with knowledge layer...";
 
     const fd = new FormData();
@@ -519,20 +535,26 @@ function initDropzone() {
       const data = await res.json();
 
       if (res.ok) {
-        statusText.innerText = `Ingested successfully! Extracted ${data.facts_extracted} facts.`;
+        statusDiv.style.background = "#ecfdf5";
+        statusDiv.style.borderColor = "#a7f3d0";
+        statusText.style.color = "var(--corrob-color)";
+        statusText.innerText = `✅ Ingested successfully! Extracted ${data.facts_extracted} facts.`;
         setTimeout(() => {
           document.getElementById("upload-modal").classList.remove("open");
-          statusDiv.style.display = "none";
-          selectedFile = null;
-          fileInput.value = "";
-          submitBtn.disabled = true;
+          resetDropzoneUI();
           loadAllData();
         }, 1200);
       } else {
+        statusDiv.style.background = "#fff1f2";
+        statusDiv.style.borderColor = "#fecdd3";
+        statusText.style.color = "var(--contra-color)";
         statusText.innerText = `Upload failed: ${data.detail || 'Unknown error'}`;
         submitBtn.disabled = false;
       }
     } catch (err) {
+      statusDiv.style.background = "#fff1f2";
+      statusDiv.style.borderColor = "#fecdd3";
+      statusText.style.color = "var(--contra-color)";
       statusText.innerText = `Error: ${err.message}`;
       submitBtn.disabled = false;
     }

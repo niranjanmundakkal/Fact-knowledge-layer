@@ -187,23 +187,27 @@
   <div id="upload-modal" class="modal-backdrop">
     <div class="modal-content">
       <button class="modal-close" id="upload-modal-close">&times;</button>
-      <h3 class="modal-title">Upload New PDF Document</h3>
+      <h3 class="modal-title">Upload PDF Document</h3>
       <p class="stat-sub" style="margin-bottom: 16px;">
         Upload any PDF. The system will incrementally extract facts and run cross-document reconciliation against all existing knowledge.
       </p>
       
       <div id="dropzone" class="dropzone">
         <div class="dropzone-icon">📄</div>
-        <p style="font-weight: 600; margin-bottom: 4px;">Drag and drop your PDF here</p>
-        <p class="stat-sub">or click to browse from your computer</p>
-        <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+        <p id="dropzone-label" style="font-weight: 600; margin-bottom: 4px;">Drag and drop your PDF here</p>
+        <p class="stat-sub" id="dropzone-sub">or click anywhere in this box to select a file</p>
       </div>
 
-      <div id="upload-status" style="display: none; margin-bottom: 16px;">
-        <p id="upload-status-text" style="font-size: 13px; color: var(--accent-cyan);"></p>
+      <div class="form-group" style="margin-top: 10px;">
+        <label class="form-label">Or choose file directly:</label>
+        <input type="file" id="pdf-file-input" accept=".pdf,application/pdf" class="form-control" style="padding: 6px 10px;">
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <div id="upload-status" style="display: none; margin: 14px 0; padding: 10px 14px; border-radius: var(--radius-sm); background: #eff6ff; border: 1px solid #bfdbfe;">
+        <p id="upload-status-text" style="font-size: 13px; color: var(--primary); font-weight: 600;"></p>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
         <button id="btn-cancel-upload" class="btn btn-secondary">Cancel</button>
         <button id="btn-submit-upload" class="btn btn-primary" disabled>Process Document</button>
       </div>

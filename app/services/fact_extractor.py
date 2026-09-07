@@ -441,28 +441,45 @@ def heuristic_page_extractor(doc_id: str, doc_name: str, page_num: int, page_tex
                 modality="ACTUAL"
             ))
 
-    # Pattern: Macro Economy & Logistics Market
-    if "531 billion" in text_lower:
-        match = re.search(r'531\s+billion[^\.\n]*by\s+2026', page_text, re.IGNORECASE)
-        if match:
-            start, end = match.span()
-            snippet = page_text[max(0, start - 20):min(len(page_text), end + 25)].strip()
-            facts.append(Fact(
-                id=f"fact_{uuid.uuid4().hex[:8]}",
-                document_id=doc_id,
-                document_name=doc_name,
-                page_number=page_num,
-                entity="Indian Logistics Market",
-                attribute="Projected Market Size by 2026",
-                value="US$ 531 Billion",
-                numeric_value=531e9,
-                unit="USD",
-                temporal_scope="Projected 2026",
-                qualifiers={"source": "Ministry of Commerce / RedSeer"},
-                exact_quote=snippet,
-                confidence=0.98,
-                modality="PROJECTED"
-            ))
+    # Generic Fallback: Extract numerical metrics and assertions from arbitrary PDFs
+    if len(facts) == 0:
+        sentences = re.split(r'(?<=[.!?])\s+', page_text)
+        doc_entity = doc_name.replace(".pdf", "").replace("_", " ").title()
+        
+        for sent in sentences[:15]:
+            sent_clean = sent.strip()
+            if len(sent_clean) < 20 or len(sent_clean) > 280:
+                continue
+
+            # Look for numbers with units or percentages
+            num_match = re.search(r'(?:[\$₹€£]\s*[\d,]+(?:\.\d+)?(?:\s*(?:billion|million|crore|trillion|lakh|cr|mn|bn|k|%))?|[\d,]+(?:\.\d+)?\s*(?:per cent|percent|%|million|billion|crore|trillion|lakh|tonnes|tons|orders|shipments|points))', sent_clean, re.IGNORECASE)
+            if num_match:
+                extracted_val = num_match.group(0).strip()
+                
+                # Derive a meaningful attribute from surrounding context words
+                words = re.findall(r'[A-Za-z]+', sent_clean)
+                meaningful_words = [w for w in words if len(w) > 3 and w.lower() not in {"this", "that", "with", "from", "were", "have", "been", "during", "which", "about", "other", "under", "these"}]
+                attr_name = " ".join(meaningful_words[:4]).title() if len(meaningful_words) >= 2 else "Statistical Metric"
+
+                facts.append(Fact(
+                    id=f"fact_{uuid.uuid4().hex[:8]}",
+                    document_id=doc_id,
+                    document_name=doc_name,
+                    page_number=page_num,
+                    entity=doc_entity,
+                    attribute=attr_name,
+                    value=extracted_val,
+                    numeric_value=None,
+                    unit="Mixed",
+                    temporal_scope="Extracted from source",
+                    qualifiers={"source_sentence": sent_clean[:100]},
+                    exact_quote=sent_clean,
+                    confidence=0.92,
+                    modality="ACTUAL"
+                ))
+
+            if len(facts) >= 6:
+                break
 
     return facts
 
