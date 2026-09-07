@@ -3,6 +3,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   initTabs();
   initModals();
   initDropzone();
@@ -13,6 +14,36 @@ document.addEventListener("DOMContentLoaded", () => {
 let cachedFacts = [];
 let cachedRelationships = [];
 let cachedDocuments = [];
+
+// 0. Theme Manager (Default: Realistic White)
+function initTheme() {
+  const savedTheme = localStorage.getItem("fkl_theme") || "light";
+  applyTheme(savedTheme);
+
+  const toggleBtn = document.getElementById("btn-theme-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const nextTheme = current === "dark" ? "light" : "dark";
+      applyTheme(nextTheme);
+      localStorage.setItem("fkl_theme", nextTheme);
+    });
+  }
+}
+
+function applyTheme(theme) {
+  const icon = document.getElementById("theme-toggle-icon");
+  const text = document.getElementById("theme-toggle-text");
+  if (theme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    if (icon) icon.innerText = "☀️";
+    if (text) text.innerText = "Light";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    if (icon) icon.innerText = "🌙";
+    if (text) text.innerText = "Dark";
+  }
+}
 
 // 1. Tab Navigation
 function initTabs() {
