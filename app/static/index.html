@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fact Knowledge Layer | Superjoin Assessment</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <!-- Global Header -->
+  <header class="header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-badge">S</div>
+        <div class="brand-text">
+          <h1>Fact Knowledge Layer</h1>
+          <p>Cross-Document Grounding & Reconciliation Engine</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-load-starter" class="btn btn-outline-emerald">
+          <span>⚡</span> Load Starter Dataset
+        </button>
+        <button id="btn-open-upload" class="btn btn-primary">
+          <span>📤</span> Upload PDF
+        </button>
+        <button id="btn-open-settings" class="btn btn-secondary">
+          <span>⚙️</span> Settings
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    <!-- Stat Counter Cards -->
+    <section class="stats-grid">
+      <div class="stat-card" style="--stat-glow: #3b82f6;">
+        <div class="stat-header">
+          <span class="stat-title">Ingested Documents</span>
+          <span class="stat-icon">📄</span>
+        </div>
+        <div class="stat-value" id="stat-docs">-</div>
+        <div class="stat-sub">Indexed in Knowledge Layer</div>
+      </div>
+
+      <div class="stat-card" style="--stat-glow: #06b6d4;">
+        <div class="stat-header">
+          <span class="stat-title">Grounded Facts</span>
+          <span class="stat-icon">🏷️</span>
+        </div>
+        <div class="stat-value" id="stat-facts">-</div>
+        <div class="stat-sub">Linked with verbatim quotes</div>
+      </div>
+
+      <div class="stat-card" style="--stat-glow: #10b981;">
+        <div class="stat-header">
+          <span class="stat-title">Corroborated Facts</span>
+          <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-value" id="stat-corrob" style="color: #10b981;">-</div>
+        <div class="stat-sub">Mutually verified claims</div>
+      </div>
+
+      <div class="stat-card" style="--stat-glow: #f43f5e;">
+        <div class="stat-header">
+          <span class="stat-title">Genuine Contradictions</span>
+          <span class="stat-icon">⚠️</span>
+        </div>
+        <div class="stat-value" id="stat-contra" style="color: #f43f5e;">-</div>
+        <div class="stat-sub">Direct conflicting figures</div>
+      </div>
+
+      <div class="stat-card" style="--stat-glow: #f59e0b;">
+        <div class="stat-header">
+          <span class="stat-title">Contextually Reconciled</span>
+          <span class="stat-icon">🔄</span>
+        </div>
+        <div class="stat-value" id="stat-reconc" style="color: #f59e0b;">-</div>
+        <div class="stat-sub">Resolved via time/units/scope</div>
+      </div>
+    </section>
+
+    <!-- Tab Navigation -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-four-cases">
+        <span>🌟</span> The 4 Required Cases
+        <span class="tab-badge">4 Core</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-relationships">
+        <span>🔗</span> Cross-Doc Relationships
+        <span class="tab-badge" id="tab-rel-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-facts">
+        <span>📊</span> Grounded Facts Explorer
+        <span class="tab-badge" id="tab-facts-badge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-documents">
+        <span>📁</span> Ingested Documents
+        <span class="tab-badge" id="tab-docs-badge">0</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: The 4 Required Cases Showcase -->
+    <div id="tab-four-cases" class="tab-pane active">
+      <div id="four-cases-container" class="showcase-grid">
+        <div class="loading-state">Loading required cases...</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Cross-Document Relationships -->
+    <div id="tab-relationships" class="tab-pane">
+      <div class="rel-filter-bar">
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="all">All Relationships</button>
+          <button class="filter-pill pill-corrob" data-filter="corroborating">Corroborating</button>
+          <button class="filter-pill pill-contra" data-filter="contradicting">Contradicting</button>
+          <button class="filter-pill pill-reconc" data-filter="reconciled">Reconciled by Context</button>
+        </div>
+        <div id="rel-count-summary" class="stat-sub">Showing all connections</div>
+      </div>
+      <div id="relationships-container" class="relationship-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- TAB 3: Grounded Facts Explorer -->
+    <div id="tab-facts" class="tab-pane">
+      <div class="table-controls">
+        <input type="text" id="fact-search-input" class="search-input" placeholder="Search by attribute, value, quote, or entity...">
+        <div style="display: flex; gap: 10px;">
+          <select id="fact-doc-filter" class="filter-select">
+            <option value="">All Documents</option>
+          </select>
+          <select id="fact-entity-filter" class="filter-select">
+            <option value="">All Entities</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Document & Page</th>
+              <th>Entity</th>
+              <th>Attribute</th>
+              <th>Extracted Value</th>
+              <th>Temporal Scope</th>
+              <th>Exact Verbatim Quote (Grounding Evidence)</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="facts-table-body">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: Ingested Documents -->
+    <div id="tab-documents" class="tab-pane">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Pages</th>
+              <th>Extracted Facts</th>
+              <th>File Size</th>
+              <th>Ingestion Time</th>
+              <th>Text Preview</th>
+            </tr>
+          </thead>
+          <tbody id="docs-table-body">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <button class="modal-close" id="upload-modal-close">&times;</button>
+      <h3 class="modal-title">Upload New PDF Document</h3>
+      <p class="stat-sub" style="margin-bottom: 16px;">
+        Upload any PDF. The system will incrementally extract facts and run cross-document reconciliation against all existing knowledge.
+      </p>
+      
+      <div id="dropzone" class="dropzone">
+        <div class="dropzone-icon">📄</div>
+        <p style="font-weight: 600; margin-bottom: 4px;">Drag and drop your PDF here</p>
+        <p class="stat-sub">or click to browse from your computer</p>
+        <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+      </div>
+
+      <div id="upload-status" style="display: none; margin-bottom: 16px;">
+        <p id="upload-status-text" style="font-size: 13px; color: var(--accent-cyan);"></p>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="btn-cancel-upload" class="btn btn-secondary">Cancel</button>
+        <button id="btn-submit-upload" class="btn btn-primary" disabled>Process Document</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <button class="modal-close" id="settings-modal-close">&times;</button>
+      <h3 class="modal-title">LLM & Engine Configuration</h3>
+      <p class="stat-sub" style="margin-bottom: 20px;">
+        Configure your AI model and extraction provider.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Active Provider</label>
+        <select id="settings-provider-select" class="form-control">
+          <option value="gemini">Google Gemini (API Key)</option>
+          <option value="groq">Groq Llama 3 (API Key)</option>
+          <option value="offline">Offline / Fast Deterministic Engine</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">API Key (Optional / Overrides .env)</label>
+        <input type="password" id="settings-api-key" class="form-control" placeholder="Enter API Key...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Model Name</label>
+        <input type="text" id="settings-model-name" class="form-control" value="gemini-3.6-flash">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
