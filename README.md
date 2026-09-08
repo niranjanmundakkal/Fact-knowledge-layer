@@ -73,7 +73,10 @@ All **10/10 test suites pass** covering PDF parsing, verbatim grounding checks, 
 
 ## 📹 Video Demo
 
-- **Video Demo Link (3 minutes or less)**: [Watch Demo Video Walkthrough](#) *(Replace with your unlisted YouTube, Loom, or Google Drive link)*
+- **Video Demo Link (3 minutes or less)**: [Watch Demo Video Walkthrough on Loom / YouTube](#) *(Add your unlisted YouTube / Loom / Drive link here)*
+- **Live Interactive System Recording (Preview)**:
+
+![Fact Knowledge Layer Interactive Dashboard Walkthrough](assets/demo_recording.webp)
 
 ### What the Demo Demonstrates:
 1. **Interactive PDF Ingestion**: Drag-and-drop or upload any PDF to see real-time atomic fact extraction and verbatim grounding citations.
