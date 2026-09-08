@@ -131,10 +131,13 @@
     <div id="tab-facts" class="tab-pane">
       <div class="table-controls">
         <input type="text" id="fact-search-input" class="search-input" placeholder="Search by attribute, value, quote, or entity...">
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <select id="fact-doc-filter" class="filter-select">
             <option value="">All Documents</option>
           </select>
+          <button id="btn-inspect-filtered-doc" class="btn btn-secondary" style="display: none; padding: 7px 12px; font-size: 12px;">
+            <span>🔍</span> Inspect Selected PDF
+          </button>
           <select id="fact-entity-filter" class="filter-select">
             <option value="">All Entities</option>
           </select>
@@ -161,25 +164,55 @@
       </div>
     </div>
 
-    <!-- TAB 4: Ingested Documents -->
+    <!-- TAB 4: Ingested Documents & Granular Dossiers -->
     <div id="tab-documents" class="tab-pane">
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Filename</th>
-              <th>Pages</th>
-              <th>Extracted Facts</th>
-              <th>File Size</th>
-              <th>Ingestion Time</th>
-              <th>Text Preview</th>
-            </tr>
-          </thead>
-          <tbody id="docs-table-body">
-            <!-- Injected via JavaScript -->
-          </tbody>
-        </table>
+      <div class="section-intro" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">PDF Document Knowledge Base</h2>
+            <p class="stat-sub">Click any PDF card below to inspect its dedicated profile, extracted facts, cross-document connections, and raw page text.</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="doc-quick-select" class="filter-select" style="min-width: 240px;">
+              <option value="">Select a document to inspect...</option>
+            </select>
+          </div>
+        </div>
       </div>
+
+      <!-- Document Cards Grid -->
+      <div id="docs-cards-grid" class="docs-cards-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Active Selected Document Dossier View -->
+      <div id="selected-doc-dossier" class="doc-dossier-panel" style="display: none; margin-top: 10px;">
+        <!-- Injected via JavaScript when a document card is clicked -->
+      </div>
+
+      <!-- Traditional Ingested Documents Table (Collapsible) -->
+      <details style="margin-top: 24px; border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 14px 18px; background: var(--bg-card);">
+        <summary style="font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;">
+          📋 View Full Ingested Documents Table Overview
+        </summary>
+        <div class="table-wrapper" style="margin-top: 14px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Pages</th>
+                <th>Extracted Facts</th>
+                <th>File Size</th>
+                <th>Ingestion Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="docs-table-body">
+              <!-- Injected via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   </main>
 
@@ -244,6 +277,16 @@
 
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
         <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Dossier Modal (Accessible from any view) -->
+  <div id="doc-dossier-modal" class="modal-backdrop">
+    <div class="modal-content modal-dossier-content">
+      <button class="modal-close" id="doc-dossier-modal-close">&times;</button>
+      <div id="modal-dossier-body">
+        <!-- Rendered dynamically -->
       </div>
     </div>
   </div>

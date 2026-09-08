@@ -5,6 +5,7 @@ Provides REST endpoints and serves the modern interactive web dashboard.
 
 import os
 import shutil
+from contextlib import asynccontextmanager
 from typing import Optional, List
 from pathlib import Path
 
@@ -22,10 +23,23 @@ from app.storage.database import DatabaseManager
 from app.services.knowledge_layer import KnowledgeLayerService
 from app.core.llm import llm_client
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure starter PDFs exist and database is initialized."""
+    docs = DatabaseManager.get_all_documents()
+    if not docs:
+        print("[Startup] Initializing knowledge layer with starter dataset...")
+        try:
+            KnowledgeLayerService.load_starter_dataset()
+        except Exception as e:
+            print(f"[Startup] Error loading starter dataset: {e}")
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Intelligent Fact Knowledge Layer for grounded fact extraction, cross-document reconciliation, and epistemic reasoning."
+    description="Intelligent Fact Knowledge Layer for grounded fact extraction, cross-document reconciliation, and epistemic reasoning.",
+    lifespan=lifespan
 )
 
 # Enable CORS for local experimentation
@@ -40,19 +54,6 @@ app.add_middleware(
 # Static files mounting
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-
-@app.on_event("startup")
-def on_startup():
-    """Ensure starter PDFs exist and database is initialized."""
-    # If no documents exist yet in DB, load the starter dataset automatically
-    docs = DatabaseManager.get_all_documents()
-    if not docs:
-        print("[Startup] Initializing knowledge layer with starter dataset...")
-        try:
-            KnowledgeLayerService.load_starter_dataset()
-        except Exception as e:
-            print(f"[Startup] Error loading starter dataset: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -74,6 +75,15 @@ def get_stats():
 def list_documents():
     """List all ingested documents in the Knowledge Layer."""
     return DatabaseManager.get_all_documents()
+
+
+@app.get("/api/documents/{document_id}")
+def get_document_details(document_id: str):
+    """Retrieve in-depth dossier for a specific selected document including profile, facts, relationships, and page texts."""
+    dossier = KnowledgeLayerService.get_document_dossier(document_id)
+    if not dossier:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    return dossier
 
 
 @app.get("/api/facts", response_model=List[Fact])

@@ -152,7 +152,7 @@ function renderCaseCard(c) {
       <div class="evidence-split">
         <div class="evidence-box">
           <div class="evidence-source">
-            <span class="doc-name">📄 ${escapeHtml(evA.document_name)}</span>
+            <span class="doc-name" style="cursor: pointer; text-decoration: underline;" onclick="openDocumentModal('${escapeHtml(evA.document_name)}')" title="Click to inspect PDF dossier">📄 ${escapeHtml(evA.document_name)}</span>
             <span class="page-tag">Page ${evA.page_number}</span>
           </div>
           <div class="evidence-quote">"${escapeHtml(evA.exact_quote)}"</div>
@@ -162,7 +162,7 @@ function renderCaseCard(c) {
         ${evB ? `
         <div class="evidence-box">
           <div class="evidence-source">
-            <span class="doc-name">📄 ${escapeHtml(evB.document_name)}</span>
+            <span class="doc-name" style="cursor: pointer; text-decoration: underline;" onclick="openDocumentModal('${escapeHtml(evB.document_name)}')" title="Click to inspect PDF dossier">📄 ${escapeHtml(evB.document_name)}</span>
             <span class="page-tag">Page ${evB.page_number}</span>
           </div>
           <div class="evidence-quote">"${escapeHtml(evB.exact_quote)}"</div>
@@ -232,7 +232,7 @@ function renderRelCard(r) {
       <div class="evidence-split" style="margin-bottom: 12px;">
         <div class="evidence-box">
           <div class="evidence-source">
-            <span class="doc-name">📄 ${escapeHtml(r.fact_a.document_name)}</span>
+            <span class="doc-name" style="cursor: pointer; text-decoration: underline;" onclick="openDocumentModal('${escapeHtml(r.fact_a.document_name)}')" title="Click to inspect PDF dossier">📄 ${escapeHtml(r.fact_a.document_name)}</span>
             <span class="page-tag">P.${r.fact_a.page_number}</span>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">${escapeHtml(r.fact_a.attribute)}</div>
@@ -242,7 +242,7 @@ function renderRelCard(r) {
 
         <div class="evidence-box">
           <div class="evidence-source">
-            <span class="doc-name">📄 ${escapeHtml(r.fact_b.document_name)}</span>
+            <span class="doc-name" style="cursor: pointer; text-decoration: underline;" onclick="openDocumentModal('${escapeHtml(r.fact_b.document_name)}')" title="Click to inspect PDF dossier">📄 ${escapeHtml(r.fact_b.document_name)}</span>
             <span class="page-tag">P.${r.fact_b.page_number}</span>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">${escapeHtml(r.fact_b.attribute)}</div>
@@ -282,7 +282,7 @@ function renderFactsTable(facts) {
   tbody.innerHTML = facts.map(f => `
     <tr>
       <td>
-        <span class="tag tag-doc">${escapeHtml(f.document_name)}</span><br/>
+        <span class="tag tag-doc" style="cursor: pointer;" onclick="openDocumentModal('${escapeHtml(f.document_id)}')" title="Click to inspect this PDF in detail">📄 ${escapeHtml(f.document_name)}</span><br/>
         <span class="tag tag-page">Page ${f.page_number}</span>
       </td>
       <td><b>${escapeHtml(f.entity)}</b></td>
@@ -318,33 +318,398 @@ function populateFactFilters(facts) {
     entities.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join("");
 }
 
-// 7. Documents List Loader
+// 7. Documents Loader & Individual PDF Dossier System
+let activeDocumentId = null;
+
 async function loadDocuments() {
   try {
     const res = await fetch("/api/documents");
     cachedDocuments = await res.json();
-    const tbody = document.getElementById("docs-table-body");
+    
+    // Render the interactive card selector
+    renderDocumentCards(cachedDocuments);
 
-    if (cachedDocuments.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No documents ingested yet.</td></tr>`;
-      return;
+    // Populate Quick Select dropdown
+    const quickSelect = document.getElementById("doc-quick-select");
+    if (quickSelect) {
+      quickSelect.innerHTML = `<option value="">Choose a document to inspect (${cachedDocuments.length})...</option>` +
+        cachedDocuments.map(d => `<option value="${d.id}">${escapeHtml(d.filename)}</option>`).join("");
+      if (activeDocumentId) quickSelect.value = activeDocumentId;
     }
 
-    tbody.innerHTML = cachedDocuments.map(d => `
-      <tr>
-        <td style="font-family: var(--font-mono); font-weight: 600; color: var(--accent-cyan);">📄 ${escapeHtml(d.filename)}</td>
-        <td>${d.page_count} pages</td>
-        <td><b style="color: #10b981;">${d.fact_count} facts</b></td>
-        <td style="font-size: 12px; color: var(--text-muted);">${formatBytes(d.file_size_bytes)}</td>
-        <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(d.uploaded_at)}</td>
-        <td style="font-size: 12px; color: #94a3b8; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(d.text_preview || '')}
-        </td>
-      </tr>
-    `).join("");
+    // Render the overview table
+    const tbody = document.getElementById("docs-table-body");
+    if (tbody) {
+      if (cachedDocuments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No documents ingested yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = cachedDocuments.map(d => `
+          <tr>
+            <td style="font-family: var(--font-mono); font-weight: 600; color: var(--accent-cyan); cursor: pointer;" onclick="selectDocument('${d.id}', true)">
+              📄 ${escapeHtml(d.filename)}
+            </td>
+            <td>${d.page_count} pages</td>
+            <td><b style="color: #10b981;">${d.fact_count} facts</b></td>
+            <td style="font-size: 12px; color: var(--text-muted);">${formatBytes(d.file_size_bytes)}</td>
+            <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(d.uploaded_at)}</td>
+            <td>
+              <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="selectDocument('${d.id}', true)">
+                Inspect Dossier 🔍
+              </button>
+            </td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    // Auto-select first document if none selected
+    if (!activeDocumentId && cachedDocuments.length > 0) {
+      selectDocument(cachedDocuments[0].id, false);
+    }
   } catch (e) {
     console.error("Error loading documents:", e);
   }
+}
+
+function renderDocumentCards(docs) {
+  const grid = document.getElementById("docs-cards-grid");
+  if (!grid) return;
+
+  if (docs.length === 0) {
+    grid.innerHTML = `<div class="stat-sub" style="padding: 20px;">No documents indexed. Click 'Load Starter Dataset' above.</div>`;
+    return;
+  }
+
+  grid.innerHTML = docs.map(d => {
+    let icon = "📄";
+    let cat = "Corporate Filing";
+    const fnLower = d.filename.toLowerCase();
+    if (fnLower.includes("prospectus")) { icon = "📜"; cat = "SEBI Offering Prospectus"; }
+    else if (fnLower.includes("earnings")) { icon = "📈"; cat = "Q4 Investor Presentation"; }
+    else if (fnLower.includes("annual")) { icon = "📘"; cat = "Audited Annual Report"; }
+    else if (fnLower.includes("survey") || fnLower.includes("economic")) { icon = "🌐"; cat = "Macroeconomic Policy Survey"; }
+
+    const isSelected = activeDocumentId === d.id || activeDocumentId === d.filename;
+
+    return `
+      <div class="doc-select-card ${isSelected ? 'selected' : ''}" data-id="${d.id}" data-filename="${escapeHtml(d.filename)}" onclick="selectDocument('${d.id}', true)">
+        <div>
+          <div class="doc-select-card-header">
+            <div class="doc-icon-badge">${icon}</div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="doc-card-cat">${cat}</span>
+              <div class="doc-card-title">${escapeHtml(d.filename)}</div>
+            </div>
+          </div>
+          <div class="doc-card-stats">
+            <div class="doc-stat-item">
+              <span class="doc-stat-val">${d.page_count}</span>
+              <span class="doc-stat-lbl">Pages</span>
+            </div>
+            <div class="doc-stat-item">
+              <span class="doc-stat-val" style="color: #10b981;">${d.fact_count}</span>
+              <span class="doc-stat-lbl">Facts</span>
+            </div>
+            <div class="doc-stat-item">
+              <span class="doc-stat-val">${formatBytes(d.file_size_bytes)}</span>
+              <span class="doc-stat-lbl">Size</span>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+            ${escapeHtml(d.text_preview || 'Parsed PDF file ready for cross-document analysis.')}
+          </p>
+        </div>
+        <div class="doc-card-footer">
+          <span>Uploaded ${escapeHtml(d.uploaded_at.split(' ')[0])}</span>
+          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="event.stopPropagation(); selectDocument('${d.id}', true);">
+            Inspect Dossier 🔍
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function selectDocument(docIdOrName, autoScroll = false) {
+  activeDocumentId = docIdOrName;
+
+  // Highlight active card
+  document.querySelectorAll(".doc-select-card").forEach(c => {
+    if (c.getAttribute("data-id") === docIdOrName || c.getAttribute("data-filename") === docIdOrName) {
+      c.classList.add("selected");
+    } else {
+      c.classList.remove("selected");
+    }
+  });
+
+  const quickSelect = document.getElementById("doc-quick-select");
+  if (quickSelect) quickSelect.value = docIdOrName;
+
+  const container = document.getElementById("selected-doc-dossier");
+  if (!container) return;
+
+  container.style.display = "block";
+  container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted);">
+    <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+    Loading detailed document dossier...
+  </div>`;
+
+  try {
+    const res = await fetch(`/api/documents/${encodeURIComponent(docIdOrName)}`);
+    if (!res.ok) throw new Error("Document not found");
+    const data = await res.json();
+    renderDossierIntoContainer(data, container, "panel");
+
+    if (autoScroll) {
+      container.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  } catch (err) {
+    container.innerHTML = `<div style="color: var(--contra-color); padding: 20px;">Failed to load dossier: ${err.message}</div>`;
+  }
+}
+
+async function openDocumentModal(docIdOrName) {
+  const modal = document.getElementById("doc-dossier-modal");
+  const body = document.getElementById("modal-dossier-body");
+  if (!modal || !body) return;
+
+  body.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">
+    <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+    Loading document dossier...
+  </div>`;
+  modal.classList.add("open");
+
+  try {
+    const res = await fetch(`/api/documents/${encodeURIComponent(docIdOrName)}`);
+    if (!res.ok) throw new Error("Document not found");
+    const data = await res.json();
+    renderDossierIntoContainer(data, body, "modal");
+  } catch (e) {
+    body.innerHTML = `<div style="color: var(--contra-color); padding: 20px;">Error loading document dossier: ${e.message}</div>`;
+  }
+}
+
+function renderDossierIntoContainer(data, container, context = "panel") {
+  const doc = data.document;
+  const profile = data.profile;
+  const stats = data.stats;
+  const facts = data.facts || [];
+  const rels = data.relationships || [];
+  const pages = data.pages || [];
+
+  const uid = context + "_" + (doc.id || Math.random().toString(36).substr(2, 5));
+
+  let icon = "📄";
+  if (doc.filename.toLowerCase().includes("prospectus")) icon = "📜";
+  else if (doc.filename.toLowerCase().includes("earnings")) icon = "📈";
+  else if (doc.filename.toLowerCase().includes("annual")) icon = "📘";
+  else if (doc.filename.toLowerCase().includes("survey") || doc.filename.toLowerCase().includes("economic")) icon = "🌐";
+
+  const highlightsHtml = (profile.key_highlights || []).map(h => `
+    <div class="highlight-pill">
+      <span>🔹</span> ${escapeHtml(h)}
+    </div>
+  `).join("");
+
+  const factsRowsHtml = facts.map(f => `
+    <tr>
+      <td><span class="tag tag-page">Page ${f.page_number}</span></td>
+      <td><b>${escapeHtml(f.attribute)}</b></td>
+      <td style="font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan);">${escapeHtml(f.value)}</td>
+      <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(f.temporal_scope || 'N/A')}</td>
+      <td style="max-width: 380px;">
+        <div style="font-style: italic; font-size: 12px; line-height: 1.4; color: var(--text-main);">"${escapeHtml(f.exact_quote)}"</div>
+      </td>
+      <td>
+        <div class="confidence-bar">
+          <div class="conf-track"><div class="conf-fill" style="width: ${Math.round(f.confidence * 100)}%;"></div></div>
+          <span style="font-size: 11px; font-family: var(--font-mono);">${Math.round(f.confidence * 100)}%</span>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  const relsCardsHtml = rels.length === 0 
+    ? `<div class="stat-sub" style="padding: 20px; text-align: center;">No cross-document relationships recorded for this document yet.</div>`
+    : rels.map(r => {
+        let badgeClass = "badge-corrob";
+        let label = "Corroborating";
+        if (r.relationship_type === "CONTRADICTING") {
+          badgeClass = "badge-contra";
+          label = "Contradicting";
+        } else if (r.relationship_type === "RECONCILED") {
+          badgeClass = "badge-reconc";
+          label = `Reconciled (${r.reconciliation_category.replace('_', ' ')})`;
+        }
+        const isA = r.fact_a.document_name === doc.filename || r.fact_a.document_id === doc.id;
+        const myFact = isA ? r.fact_a : r.fact_b;
+        const otherFact = isA ? r.fact_b : r.fact_a;
+
+        return `
+          <div class="rel-card" style="margin-bottom: 12px;">
+            <div class="rel-header">
+              <span class="rel-type-tag ${badgeClass}">${label}</span>
+              <span class="rel-entity">Subject: <b>${escapeHtml(myFact.attribute)}</b></span>
+            </div>
+            <div class="evidence-split">
+              <div class="evidence-box" style="border-left: 3px solid var(--primary);">
+                <div class="evidence-source">
+                  <span class="doc-name">This PDF: ${escapeHtml(doc.filename)}</span>
+                  <span class="page-tag">Page ${myFact.page_number}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">${escapeHtml(myFact.attribute)}</div>
+                <div class="evidence-value" style="color: var(--accent-cyan); font-weight: 700;">${escapeHtml(myFact.value)}</div>
+                <div class="evidence-quote" style="margin-top: 6px;">"${escapeHtml(myFact.exact_quote)}"</div>
+              </div>
+              <div class="evidence-box">
+                <div class="evidence-source">
+                  <span class="doc-name" style="cursor: pointer; text-decoration: underline;" onclick="openDocumentModal('${escapeHtml(otherFact.document_name)}')">Other PDF: ${escapeHtml(otherFact.document_name)}</span>
+                  <span class="page-tag">Page ${otherFact.page_number}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">${escapeHtml(otherFact.attribute)}</div>
+                <div class="evidence-value" style="color: var(--accent-cyan); font-weight: 700;">${escapeHtml(otherFact.value)}</div>
+                <div class="evidence-quote" style="margin-top: 6px;">"${escapeHtml(otherFact.exact_quote)}"</div>
+              </div>
+            </div>
+            <div class="reasoning-box" style="margin-top: 10px;">
+              <div class="reasoning-label"><span>🧠</span> Epistemic Reasoning</div>
+              <div class="reasoning-text">${escapeHtml(r.reasoning)}</div>
+              ${r.context_nuance ? `<div style="font-size: 12px; color: var(--accent-cyan); margin-top: 6px;"><b>Resolving Context:</b> ${escapeHtml(r.context_nuance)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+  const pagePillsHtml = pages.map((p, idx) => `
+    <button class="page-pill ${idx === 0 ? 'active' : ''}" data-target="${uid}_page_${p.page_number}">
+      Page ${p.page_number} (${p.facts_count} facts, ${p.character_count} chars)
+    </button>
+  `).join("");
+
+  const pageContentsHtml = pages.map((p, idx) => `
+    <div id="${uid}_page_${p.page_number}" class="page-content-pane" style="display: ${idx === 0 ? 'block' : 'none'};">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 600; color: var(--text-subtle);">Exact Text Content — Page ${p.page_number} (${p.character_count} characters)</span>
+        <span class="tag tag-page">${p.facts_count} Grounded Facts on this Page</span>
+      </div>
+      <div class="page-text-card">${escapeHtml(p.text)}</div>
+    </div>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="dossier-header">
+      <div class="dossier-title-area">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+          <span style="font-size: 26px;">${icon}</span>
+          <h2>${escapeHtml(profile.title)}</h2>
+        </div>
+        <div class="dossier-meta-chips">
+          <span class="meta-chip meta-chip-primary">📁 ${escapeHtml(profile.category)}</span>
+          <span class="meta-chip">🏢 Entity: ${escapeHtml(profile.entity)}</span>
+          <span class="meta-chip">📅 Period: ${escapeHtml(profile.reporting_period)}</span>
+          <span class="meta-chip">📄 ${doc.page_count} Pages</span>
+          <span class="meta-chip">💾 ${formatBytes(doc.file_size_bytes)}</span>
+          <span class="meta-chip">🏷️ ${stats.total_facts} Grounded Facts</span>
+          <span class="meta-chip meta-chip-corrob">✅ ${stats.corroborations_count} Corroborations</span>
+          <span class="meta-chip meta-chip-contra">⚠️ ${stats.contradictions_count} Contradictions</span>
+          <span class="meta-chip meta-chip-reconc">🔄 ${stats.reconciled_count} Reconciled</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Briefing & Knowledge Layer Role -->
+    <div class="dossier-briefing-box">
+      <div class="briefing-row">
+        <div class="briefing-label"><span>📌</span> Executive Document Briefing</div>
+        <div class="briefing-text">${escapeHtml(profile.executive_summary)}</div>
+      </div>
+      <div class="briefing-row" style="margin-top: 14px;">
+        <div class="briefing-label"><span>🎯</span> Role & Significance in Knowledge Layer</div>
+        <div class="briefing-text">${escapeHtml(profile.role_in_knowledge_layer)}</div>
+      </div>
+      <div class="briefing-row" style="margin-top: 14px;">
+        <div class="briefing-label"><span>⭐</span> Key Highlights & Stated Metrics</div>
+        <div class="highlights-grid">
+          ${highlightsHtml}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tabs Navigation -->
+    <div class="dossier-subtabs">
+      <button class="dossier-tab-btn active" data-subtab="${uid}_tab_facts">
+        <span>🏷️</span> Extracted Facts (${facts.length})
+      </button>
+      <button class="dossier-tab-btn" data-subtab="${uid}_tab_rels">
+        <span>🔗</span> Cross-Doc Connections (${rels.length})
+      </button>
+      <button class="dossier-tab-btn" data-subtab="${uid}_tab_source">
+        <span>📖</span> Verbatim Source Pages (${pages.length})
+      </button>
+    </div>
+
+    <!-- Sub-tab 1: Facts -->
+    <div id="${uid}_tab_facts" class="dossier-tab-pane">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Page</th>
+              <th>Attribute</th>
+              <th>Extracted Value</th>
+              <th>Temporal Scope</th>
+              <th>Verbatim Evidence Quote</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${factsRowsHtml || '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No facts extracted from this document.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sub-tab 2: Relationships -->
+    <div id="${uid}_tab_rels" class="dossier-tab-pane" style="display: none;">
+      ${relsCardsHtml}
+    </div>
+
+    <!-- Sub-tab 3: Source Pages -->
+    <div id="${uid}_tab_source" class="dossier-tab-pane" style="display: none;">
+      <div class="page-pills">
+        ${pagePillsHtml}
+      </div>
+      <div class="page-contents-wrapper">
+        ${pageContentsHtml}
+      </div>
+    </div>
+  `;
+
+  // Attach Sub-tab switching events
+  const tabBtns = container.querySelectorAll(".dossier-tab-btn");
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const targetId = btn.getAttribute("data-subtab");
+      container.querySelectorAll(".dossier-tab-pane").forEach(pane => {
+        pane.style.display = pane.id === targetId ? "block" : "none";
+      });
+    });
+  });
+
+  // Attach Page Pills switching events
+  const pagePills = container.querySelectorAll(".page-pill");
+  pagePills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      pagePills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const targetPageId = pill.getAttribute("data-target");
+      container.querySelectorAll(".page-content-pane").forEach(pane => {
+        pane.style.display = pane.id === targetPageId ? "block" : "none";
+      });
+    });
+  });
 }
 
 // 8. Filters & Search Handlers
@@ -352,11 +717,22 @@ function initFilters() {
   const searchInput = document.getElementById("fact-search-input");
   const docFilter = document.getElementById("fact-doc-filter");
   const entityFilter = document.getElementById("fact-entity-filter");
+  const btnInspectFiltered = document.getElementById("btn-inspect-filtered-doc");
+  const docQuickSelect = document.getElementById("doc-quick-select");
 
   function applyFactFilters() {
     const query = searchInput.value.toLowerCase().trim();
     const selectedDoc = docFilter.value;
     const selectedEntity = entityFilter.value;
+
+    if (btnInspectFiltered) {
+      if (selectedDoc) {
+        btnInspectFiltered.style.display = "inline-flex";
+        btnInspectFiltered.innerHTML = `<span>🔍</span> Inspect ${escapeHtml(selectedDoc.replace('.pdf', ''))}`;
+      } else {
+        btnInspectFiltered.style.display = "none";
+      }
+    }
 
     const filtered = cachedFacts.filter(f => {
       const matchDoc = !selectedDoc || f.document_name === selectedDoc;
@@ -376,6 +752,22 @@ function initFilters() {
   searchInput.addEventListener("input", applyFactFilters);
   docFilter.addEventListener("change", applyFactFilters);
   entityFilter.addEventListener("change", applyFactFilters);
+
+  if (btnInspectFiltered) {
+    btnInspectFiltered.addEventListener("click", () => {
+      if (docFilter.value) {
+        openDocumentModal(docFilter.value);
+      }
+    });
+  }
+
+  if (docQuickSelect) {
+    docQuickSelect.addEventListener("change", (e) => {
+      if (e.target.value) {
+        selectDocument(e.target.value, true);
+      }
+    });
+  }
 
   // Tab 2 Relationship filter pills
   const pills = document.querySelectorAll(".filter-pill");
@@ -410,10 +802,11 @@ function initFilters() {
   });
 }
 
-// 9. Modals (Upload & Settings)
+// 9. Modals (Upload, Settings & Document Dossier)
 function initModals() {
   const uploadModal = document.getElementById("upload-modal");
   const settingsModal = document.getElementById("settings-modal");
+  const docModal = document.getElementById("doc-dossier-modal");
 
   document.getElementById("btn-open-upload").addEventListener("click", () => {
     uploadModal.classList.add("open");
@@ -438,6 +831,20 @@ function initModals() {
   document.getElementById("settings-modal-close").addEventListener("click", () => {
     settingsModal.classList.remove("open");
   });
+
+  if (docModal) {
+    const docModalClose = document.getElementById("doc-dossier-modal-close");
+    if (docModalClose) {
+      docModalClose.addEventListener("click", () => {
+        docModal.classList.remove("open");
+      });
+    }
+    docModal.addEventListener("click", (e) => {
+      if (e.target === docModal) {
+        docModal.classList.remove("open");
+      }
+    });
+  }
 
   document.getElementById("btn-save-settings").addEventListener("click", async () => {
     const provider = document.getElementById("settings-provider-select").value;

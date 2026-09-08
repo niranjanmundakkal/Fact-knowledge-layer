@@ -112,6 +112,36 @@ class DatabaseManager:
         ]
 
     @staticmethod
+    def get_document(doc_id_or_name: str) -> Optional[DocumentMetadata]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM documents WHERE id = ? OR filename = ?", (doc_id_or_name, doc_id_or_name))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return None
+        return DocumentMetadata(
+            id=row["id"],
+            filename=row["filename"],
+            page_count=row["page_count"],
+            fact_count=row["fact_count"],
+            file_size_bytes=row["file_size_bytes"],
+            uploaded_at=row["uploaded_at"],
+            text_preview=row["text_preview"]
+        )
+
+    @staticmethod
+    def get_relationships_by_document(doc_id_or_name: str) -> List[FactRelationship]:
+        all_rels = DatabaseManager.get_all_relationships()
+        res = []
+        for r in all_rels:
+            match_a = r.fact_a.document_id == doc_id_or_name or r.fact_a.document_name == doc_id_or_name
+            match_b = r.fact_b.document_id == doc_id_or_name or r.fact_b.document_name == doc_id_or_name
+            if match_a or match_b:
+                res.append(r)
+        return res
+
+    @staticmethod
     def save_facts(facts: List[Fact]):
         if not facts:
             return
