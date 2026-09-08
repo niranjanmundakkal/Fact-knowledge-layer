@@ -73,7 +73,7 @@ All **10/10 test suites pass** covering PDF parsing, verbatim grounding checks, 
 
 ## 📹 Video Demo
 
-- **Video Demo Link (3 minutes or less)**: [Watch Demo Video Walkthrough on Loom / YouTube](#) *(Add your unlisted YouTube / Loom / Drive link here)*
+- **Video Demo Link (3 minutes or less)**: [Watch Demo Video Walkthrough on Google Drive](https://drive.google.com/file/d/1CesNMMDCmq6JTlD-oxhE_eMirSS9guld/view?usp=sharing)
 - **Live Interactive System Recording (Preview)**:
 
 ![Fact Knowledge Layer Interactive Dashboard Walkthrough](assets/demo_recording.webp)
